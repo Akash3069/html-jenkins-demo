@@ -41,12 +41,17 @@ pipeline {
   }
 
   post {
-    success {
-      echo "Build, run, and push successful: ${BUILD_NUMBER}"
-    }
-    failure {
-      echo "Build failed"
-    }
+  success {
+    mail to: 'athengumparampil@gmail.com',
+         subject: "Build Success: ${BUILD_NUMBER}",
+         body: "Jenkins pipeline succeeded!"
   }
+  failure {
+    mail to: 'athengumparampil@gmail.com',
+         subject: "Build Failed: ${BUILD_NUMBER}",
+         body: "Please check Jenkins pipeline logs for build ${BUILD_NUMBER}"
+  }
+}
+
 }
 
