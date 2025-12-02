@@ -1,0 +1,10 @@
+{
+  "name": "jenkins-multibranch-demo",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "node -e \"console.log('basic test OK'); process.exit(0)\""
+  }
+}
+

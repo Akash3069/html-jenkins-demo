@@ -2,56 +2,55 @@ pipeline {
   agent any
 
   environment {
-    IMAGE = 'akash550/html-jenkins-demo'
+    IMAGE = "akash550/html-jenkins-demo"    // change or leave if not pushing
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/Akash3069/html-jenkins-demo.git', branch: 'main'
+        checkout scm
+        script { echo "Building branch: ${env.BRANCH_NAME}" }
       }
     }
 
-    stage('Docker Build') {
+    stage('Unit Test') {
       steps {
-        sh "docker build -t ${IMAGE}:${BUILD_NUMBER} ."
+        sh 'npm ci'
+        sh 'npm test'
       }
     }
 
-    stage('Run Docker Container') {
+    stage('Build Docker Image') {
       steps {
-        sh """
-          docker stop htmlapp || true
-          docker rm htmlapp || true
-          docker run -d --name htmlapp -p 80:80 ${IMAGE}:${BUILD_NUMBER}
-        """
+        script {
+          def tag = env.BRANCH_NAME.replaceAll('/', '-')
+          sh "docker build -t ${IMAGE}:${tag} ."
+        }
       }
     }
 
-    stage('Push to Docker Hub') {
+    stage('Push Image (optional)') {
+      when {
+        expression { return env.DOCKER_PUSH == 'true' }
+      }
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
-                                          usernameVariable: 'DOCKER_USER', 
-                                          passwordVariable: 'DOCKER_PASS')]) {
-          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-          sh "docker push ${IMAGE}:${BUILD_NUMBER}"
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+          script {
+            def tag = env.BRANCH_NAME.replaceAll('/', '-')
+            sh '''
+              echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+              docker push ${IMAGE}:${tag}
+              docker logout
+            '''
+          }
         }
       }
     }
   }
 
   post {
-  success {
-    mail to: 'athengumparampil@gmail.com',
-         subject: "Build Success: ${BUILD_NUMBER}",
-         body: "Jenkins pipeline succeeded!"
+    success { echo "Build success for ${env.BRANCH_NAME}" }
+    failure { echo "Build failed for ${env.BRANCH_NAME}" }
   }
-  failure {
-    mail to: 'athengumparampil@gmail.com',
-         subject: "Build Failed: ${BUILD_NUMBER}",
-         body: "Please check Jenkins pipeline logs for build ${BUILD_NUMBER}"
-  }
-}
-
 }
 
